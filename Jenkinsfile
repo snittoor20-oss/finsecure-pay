@@ -1,0 +1,138 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE     = "dskn123/finsecure-pay"
+        DOCKER_TAG       = "${BUILD_NUMBER}"
+        KUBECONFIG_FILE  = credentials('kubeconfig')
+        SONAR_TOKEN      = credentials('sonar-token')
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    credentialsId: 'github-credentials',
+                    url: 'https://github.com/snittoor20-oss/finsecure-pay.git'
+                echo "Checked out commit: ${GIT_COMMIT}"
+            }
+        }
+
+        stage('Build') {
+            steps {
+                bat 'mvn clean compile -q'
+            }
+        }
+
+        stage('Unit Tests') {
+            steps {
+                bat 'mvn test'
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
+                }
+                failure {
+                    echo 'Tests failed — deployment will not proceed.'
+                    emailext(
+                        subject: "FAILED: Build #${BUILD_NUMBER} — Tests Failed",
+                        body: "Unit tests failed. Deployment blocked. See: ${BUILD_URL}",
+                        to: 'devops-team@finsecure.com'
+                    )
+                }
+            }
+        }
+
+        stage('Package') {
+            steps {
+                bat 'mvn package -DskipTests'
+                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+            }
+        }
+
+        stage('Security Checks') {
+            parallel {
+
+                stage('OWASP Dependency Check') {
+                    steps {
+                        dependencyCheck additionalArguments: '--scan ./ --format HTML --format XML',
+                                        odcInstallation: 'OWASP-DC'
+                        dependencyCheckPublisher pattern: 'dependency-check-report.xml'
+                    }
+                }
+
+                stage('SonarQube Analysis') {
+                    steps {
+                        bat """
+                            mvn sonar:sonar \
+                              -Dsonar.projectKey=finsecure-pay \
+                              -Dsonar.host.url=http://localhost:9000 \
+                              -Dsonar.login=${SONAR_TOKEN}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Container Build') {
+            steps {
+                bat "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                bat "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
+            }
+        }
+
+        stage('Trivy Image Scan') {
+            steps {
+                bat "trivy image --exit-code 1 --severity CRITICAL ${DOCKER_IMAGE}:${DOCKER_TAG}"
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-credentials',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS')]) {
+                    bat "docker login -u %DOCKER_USER% -p %DOCKER_PASS%"
+                    bat "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                    bat "docker push ${DOCKER_IMAGE}:latest"
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                withEnv(["KUBECONFIG=${KUBECONFIG_FILE}"]) {
+                    bat """
+                        kubectl set image deployment/finsecure-pay \
+                          finsecure-pay=${DOCKER_IMAGE}:${DOCKER_TAG} \
+                          --record
+                        kubectl rollout status deployment/finsecure-pay --timeout=120s
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            emailext(
+                subject: "SUCCESS: Build #${BUILD_NUMBER} deployed",
+                body: "Build ${BUILD_NUMBER} deployed successfully. Image: ${DOCKER_IMAGE}:${DOCKER_TAG}. URL: ${BUILD_URL}",
+                to: 'devops-team@finsecure.com'
+            )
+        }
+        failure {
+            emailext(
+                subject: "FAILED: Build #${BUILD_NUMBER}",
+                body: "Build ${BUILD_NUMBER} failed. See details: ${BUILD_URL}",
+                to: 'devops-team@finsecure.com'
+            )
+        }
+        always {
+            bat 'docker logout'
+            cleanWs()
+        }
+    }
+}
