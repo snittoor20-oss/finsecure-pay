@@ -3,8 +3,11 @@ kind: ConfigMap
 metadata:
   name: finsecure-config
   namespace: default
+  labels:
+    app: finsecure-pay
 data:
-  APP_ENV: "production"
-  MAX_TRANSACTION_AMOUNT: "100000"
-  SUPPORTED_CURRENCIES: "USD,EUR,SGD,GBP"
-  LOG_LEVEL: "INFO"
+  APP_MAX_AMOUNT: "10000"
+  APP_MIN_AMOUNT: "0.01"
+  APP_SUPPORTED_CURRENCIES: "SGD,USD,EUR,GBP"
+  SPRING_APPLICATION_NAME: "finsecure-pay"
+  LOGGING_LEVEL_COM_FINSECURE: "DEBUG"

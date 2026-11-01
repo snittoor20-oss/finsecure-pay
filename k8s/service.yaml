@@ -3,11 +3,14 @@ kind: Service
 metadata:
   name: finsecure-pay-service
   namespace: default
+  labels:
+    app: finsecure-pay
 spec:
+  type: LoadBalancer
   selector:
     app: finsecure-pay
   ports:
-    - protocol: TCP
+    - name: http
+      protocol: TCP
       port: 80
       targetPort: 8080
-  type: LoadBalancer

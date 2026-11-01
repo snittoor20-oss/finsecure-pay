@@ -5,6 +5,7 @@ metadata:
   namespace: default
   labels:
     app: finsecure-pay
+    version: "1.0.0"
 spec:
   replicas: 2
   selector:
@@ -19,39 +20,56 @@ spec:
     metadata:
       labels:
         app: finsecure-pay
+        version: "1.0.0"
     spec:
       containers:
         - name: finsecure-pay
-          image: yourdockerhubusername/finsecure-pay:1.0.0
+          image: dskn123/finsecure-pay:1.0.0
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
+              name: http
+
+          # Inject ConfigMap values as environment variables
           envFrom:
             - configMapRef:
                 name: finsecure-config
+
+          # Inject individual secret values
           env:
-            - name: DB_PASSWORD
+            - name: APP_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: finsecure-secrets
-                  key: DB_PASSWORD
+                  key: api-key
+
+          # Resource limits - important for cluster stability
           resources:
             requests:
               memory: "256Mi"
-              cpu: "250m"
+              cpu: "100m"
             limits:
               memory: "512Mi"
               cpu: "500m"
+
+          # Readiness probe - Kubernetes only sends traffic
+          # when this passes
           readinessProbe:
             httpGet:
               path: /health
               port: 8080
-            initialDelaySeconds: 20
-            periodSeconds: 10
+            initialDelaySeconds: 15
+            periodSeconds: 5
             failureThreshold: 3
+            successThreshold: 1
+
+          # Liveness probe - Kubernetes restarts the pod
+          # if this fails
           livenessProbe:
             httpGet:
               path: /health
               port: 8080
-            initialDelaySeconds: 40
-            periodSeconds: 15
+            initialDelaySeconds: 30
+            periodSeconds: 10
             failureThreshold: 3
+            timeoutSeconds: 5
