@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -7,123 +8,89 @@ pipeline {
         skipDefaultCheckout(true)
     }
 
+    environment {
+        IMAGE_NAME = 'dskn123/finsecure-pay'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+    }
+
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
-                echo 'FinSecure Pay source code checked out.'
+            }
+        }
+
+        stage('Secret Scan - Source Code') {
+            steps {
+                sh '''
+                    mkdir -p reports
+
+                    trivy fs \
+                      --scanners secret \
+                      --severity HIGH,CRITICAL \
+                      --format json \
+                      --exit-code 0 \
+                      --output reports/source-secret-report.json \
+                      .
+
+                    trivy fs \
+                      --scanners secret \
+                      --severity HIGH,CRITICAL \
+                      --exit-code 1 \
+                      .
+                '''
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 sh '''
-                    set -e
                     docker build \
-                      -t dskn123/finsecure-pay:$BUILD_NUMBER \
-                      ./pay
+                      -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                      -f pay/Dockerfile \
+                      pay
                 '''
             }
         }
 
-        stage('Container Image Scan - Trivy') {
+        stage('Vulnerability Scan - Trivy') {
             steps {
                 sh '''
-                    set -e
+                    mkdir -p reports
+
                     trivy image \
+                      --scanners vuln \
+                      --severity HIGH,CRITICAL \
+                      --format json \
+                      --exit-code 0 \
+                      --output reports/image-vulnerability-report.json \
+                      ${IMAGE_NAME}:${IMAGE_TAG}
+
+                    trivy image \
+                      --scanners vuln \
                       --severity HIGH,CRITICAL \
                       --exit-code 1 \
-                      dskn123/finsecure-pay:$BUILD_NUMBER
+                      ${IMAGE_NAME}:${IMAGE_TAG}
                 '''
             }
         }
-
-        stage('Secret Scan - Trivy') {
-            steps {
-                sh '''
-                    set -e
-                    trivy image \
-                      --scanners secret \
-                      --severity HIGH,CRITICAL \
-                      --exit-code 1 \
-                      dskn123/finsecure-pay:$BUILD_NUMBER
-                '''
-            }
-        }
     }
-
-stage('Vulnerability Scan - Trivy') {
-    steps {
-        sh '''
-            mkdir -p reports
-            set +e
-
-            trivy image \
-              --scanners vuln \
-              --severity HIGH,CRITICAL \
-              --format json \
-              --output reports/image-vulnerability-report.json \
-              ${IMAGE_NAME}:${IMAGE_TAG}
-
-            SCAN_STATUS=$?
-
-            trivy image \
-              --scanners vuln \
-              --severity HIGH,CRITICAL \
-              ${IMAGE_NAME}:${IMAGE_TAG}
-
-            set -e
-            exit $SCAN_STATUS
-        '''
-    }
-}
-
-stage('Secret Scan - Source Code') {
-    steps {
-        sh '''
-            mkdir -p reports
-            set +e
-
-            trivy fs \
-              --scanners secret \
-              --severity HIGH,CRITICAL \
-              --format json \
-              --output reports/source-secret-report.json \
-              .
-
-            SCAN_STATUS=$?
-
-            trivy fs \
-              --scanners secret \
-              --severity HIGH,CRITICAL \
-              .
-
-            set -e
-            exit $SCAN_STATUS
-        '''
-    }
-}
 
     post {
+        always {
+            archiveArtifacts artifacts: 'reports/*.json',
+                             allowEmptyArchive: true,
+                             fingerprint: true
+
+            echo 'Trivy security scan evidence archived.'
+        }
+
         success {
             echo 'FinSecure Pay pipeline completed successfully.'
         }
 
         failure {
-            echo 'Pipeline failed. Check Console Output.'
-        }
-
-        always {
-            echo 'Pipeline execution finished.'
+            echo 'Pipeline failed. Review the Jenkins console output and Trivy reports.'
         }
     }
-post {
-    always {
-        archiveArtifacts artifacts: 'reports/*.json',
-                         allowEmptyArchive: true,
-                         fingerprint: true
-
-        echo 'Security scan evidence archived.'
-    }
-}
 }
