@@ -6,8 +6,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class PayApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(PayApplication.class, args);
-	}
+    // CI/CD Demo: Source code updated to verify automatic Jenkins triggering.
 
+    public static void main(String[] args) {
+        SpringApplication.run(PayApplication.class, args);
+    }
 }
