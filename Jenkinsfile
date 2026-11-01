@@ -16,29 +16,54 @@ pipeline {
             }
         }
 
-        stage('Build and Test') {
-            steps {
-                sh '''
-                    set -e
+        ```groovy
+stage('Build and Test') {
+    steps {
+        sh '''
+            set -e
 
-                    docker run --rm \
-                      -v "$WORKSPACE:/workspace" \
-                      -w /workspace/pay \
-                      maven:3.9.9-eclipse-temurin-17 \
-                      mvn clean verify
-                '''
-            }
+            CONTAINER="finsecure-maven-$BUILD_NUMBER"
 
-            post {
-                always {
-                    junit(
-                        testResults: 'pay/target/surefire-reports/*.xml',
-                        allowEmptyResults: true
-                    )
-                }
-            }
+            echo "Creating Maven container..."
+
+            docker create \
+              --name "$CONTAINER" \
+              --workdir /workspace/pay \
+              maven:3.9.9-eclipse-temurin-17 \
+              mvn clean verify
+
+            echo "Copying Jenkins workspace into Maven container..."
+
+            docker cp "$WORKSPACE/." "$CONTAINER:/workspace"
+
+            echo "Running Maven build and tests..."
+
+            docker start -a "$CONTAINER"
+
+            echo "Copying Maven build results back..."
+
+            mkdir -p "$WORKSPACE/pay"
+
+            docker cp \
+              "$CONTAINER:/workspace/pay/target" \
+              "$WORKSPACE/pay/"
+
+            docker rm "$CONTAINER"
+
+            echo "Maven build and tests completed."
+        '''
+    }
+
+    post {
+        always {
+            junit(
+                testResults: 'pay/target/surefire-reports/*.xml',
+                allowEmptyResults: true
+            )
         }
-
+    }
+}
+```
         stage('Build Docker Image') {
             steps {
                 sh '''
