@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE     = "yourdockerhubusername/finsecure-pay"
+        DOCKER_IMAGE     = "dskn123/finsecure-pay"
         DOCKER_TAG       = "${BUILD_NUMBER}"
         KUBECONFIG_FILE  = credentials('kubeconfig')
         SONAR_TOKEN      = credentials('sonar-token')
@@ -14,7 +14,7 @@ pipeline {
             steps {
                 git branch: 'main',
                     credentialsId: 'github-credentials',
-                    url: 'https://github.com/yourusername/finsecure-pay.git'
+                    url: 'https://github.com/snittoor20-oss/finsecure-pay.git'
                 echo "Checked out commit: ${GIT_COMMIT}"
             }
         }

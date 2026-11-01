@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: finsecure-config
+  namespace: default
+data:
+  APP_ENV: "production"
+  MAX_TRANSACTION_AMOUNT: "100000"
+  SUPPORTED_CURRENCIES: "USD,EUR,SGD,GBP"
+  LOG_LEVEL: "INFO"
