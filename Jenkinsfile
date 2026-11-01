@@ -1,5 +1,4 @@
-
-pipeline {
+﻿pipeline {
     agent any
 
     options {
@@ -27,20 +26,31 @@ pipeline {
             }
         }
 
-        
+        stage('Container Image Scan - Trivy') {
+            steps {
+                sh '''
+                    set -e
+                    trivy image \
+                      --severity HIGH,CRITICAL \
+                      --exit-code 1 \
+                      dskn123/finsecure-pay:$BUILD_NUMBER
+                '''
+            }
+        }
 
-stage('Secret Scan - Trivy') {
-    steps {
-        sh '''
-            set -e
-            trivy image \
-              --scanners secret \
-              --severity HIGH,CRITICAL \
-              --exit-code 1 \
-              dskn123/finsecure-pay:$BUILD_NUMBER
-        '''
+        stage('Secret Scan - Trivy') {
+            steps {
+                sh '''
+                    set -e
+                    trivy image \
+                      --scanners secret \
+                      --severity HIGH,CRITICAL \
+                      --exit-code 1 \
+                      dskn123/finsecure-pay:$BUILD_NUMBER
+                '''
+            }
+        }
     }
-}
 
     post {
         success {
