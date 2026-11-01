@@ -26,14 +26,14 @@ public class ValidationService {
         if (request.getCurrency() == null || !SUPPORTED_CURRENCIES.contains(request.getCurrency().toUpperCase())) {
             errors.add("Unsupported currency. Supported: " + SUPPORTED_CURRENCIES);
         }
-        if (request.getSenderAccount() == null || request.getSenderAccount().isBlank()) {
+        if (request.getAccountFrom() == null || request.getAccountFrom().isBlank()) {
             errors.add("Sender account is required");
         }
-        if (request.getReceiverAccount() == null || request.getReceiverAccount().isBlank()) {
+        if (request.getAccountTo() == null || request.getAccountTo().isBlank()) {
             errors.add("Receiver account is required");
         }
-        if (request.getSenderAccount() != null &&
-            request.getSenderAccount().equals(request.getReceiverAccount())) {
+        if (request.getAccountFrom() != null &&
+            request.getAccountFrom().equals(request.getAccountTo())) {
             errors.add("Sender and receiver accounts cannot be the same");
         }
 

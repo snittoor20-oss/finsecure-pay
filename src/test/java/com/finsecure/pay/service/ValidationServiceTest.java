@@ -23,8 +23,8 @@ class ValidationServiceTest {
         req.setTransactionId("TXN-001");
         req.setAmount(500.00);
         req.setCurrency("USD");
-        req.setSenderAccount("ACC-123");
-        req.setReceiverAccount("ACC-456");
+        req.setAccountFrom("ACC-123");
+        req.setAccountTo("ACC-456");
         return req;
     }
 
@@ -199,7 +199,7 @@ class ValidationServiceTest {
     @DisplayName("TC13 - Missing sender account should fail validation")
     void testMissingSenderAccount() {
         TransactionRequest req = validRequest();
-        req.setSenderAccount("");
+        req.setAccountFrom("");
 
         ValidationService.ValidationResult result =
                 validationService.validate(req);
@@ -215,7 +215,7 @@ class ValidationServiceTest {
     @DisplayName("TC14 - Missing receiver account should fail validation")
     void testMissingReceiverAccount() {
         TransactionRequest req = validRequest();
-        req.setReceiverAccount("");
+        req.setAccountTo("");
 
         ValidationService.ValidationResult result =
                 validationService.validate(req);
@@ -231,7 +231,7 @@ class ValidationServiceTest {
     @DisplayName("TC15 - Same sender and receiver account should fail validation")
     void testSameAccountSenderReceiver() {
         TransactionRequest req = validRequest();
-        req.setReceiverAccount("ACC-123"); // same as sender
+        req.setAccountTo("ACC-123"); // same as sender
 
         ValidationService.ValidationResult result =
                 validationService.validate(req);
@@ -250,8 +250,8 @@ class ValidationServiceTest {
         req.setTransactionId("");
         req.setAmount(-50.00);
         req.setCurrency("INVALID");
-        req.setSenderAccount("");
-        req.setReceiverAccount("");
+        req.setAccountFrom("");
+        req.setAccountTo("");
 
         ValidationService.ValidationResult result =
                 validationService.validate(req);
