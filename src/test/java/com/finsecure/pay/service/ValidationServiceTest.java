@@ -285,15 +285,13 @@ class ValidationServiceTest {
             "Intentional failure to demonstrate pipeline gate");
     }
 
-        Step 4.8 – Demonstrate a Failing Test Blocking Deployment
-        Add a deliberately broken test to your test file:
-        java
-        @Test
-        @DisplayName("INTENTIONAL FAILURE - remove before final submission")
-        void testIntentionalFailure() {
+        
+    @Test
+    @DisplayName("INTENTIONAL FAILURE - remove before final submission")
+    void testIntentionalFailure() {
             // This test is deliberately broken to demonstrate
             // that a failing test blocks the pipeline
-            assertEquals(1, 2,
-                "Intentional failure to demonstrate pipeline gate");
+        assertEquals(1, 2,
+            "Intentional failure to demonstrate pipeline gate");
     }
 }
