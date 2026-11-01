@@ -28,20 +28,20 @@ pipeline {
         }
 
         
-stage('Trivy Secret Security Gate') {
+
+stage('Container Image Security Scan - Trivy') {
     steps {
         sh '''
             set -e
 
             trivy image \
-              --scanners secret \
+              --scanners vuln,secret \
               --severity HIGH,CRITICAL \
               --exit-code 1 \
               dskn123/finsecure-pay:$BUILD_NUMBER
         '''
     }
 }
-
 
     post {
         success {
