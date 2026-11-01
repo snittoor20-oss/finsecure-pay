@@ -8,6 +8,10 @@ pipeline {
         skipDefaultCheckout(true)
     }
 
+   triggers {
+        pollSCM('H/2 * * * *')
+    }
+
     environment {
         IMAGE_NAME = 'dskn123/finsecure-pay'
         IMAGE_TAG = "${BUILD_NUMBER}"
