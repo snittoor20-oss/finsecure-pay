@@ -1,26 +1,45 @@
+
 pipeline {
     agent any
 
     stages {
         stage('Checkout') {
             steps {
-                echo 'FinSecure Pay pipeline started'
+                echo 'Checking out FinSecure Pay source code'
             }
         }
 
         stage('Build') {
             steps {
-                echo 'Ready to build FinSecure Pay'
+                dir('pay') {
+                    bat 'mvn clean compile'
+                }
             }
         }
-    }
 
-    post {
-        success {
-            echo 'Pipeline completed successfully'
+        stage('Unit Tests') {
+            steps {
+                dir('pay') {
+                    bat 'mvn test'
+                }
+            }
+            post {
+                always {
+                    junit 'pay/target/surefire-reports/*.xml'
+                }
+            }
         }
-        failure {
-            echo 'Pipeline failed'
+
+        stage('Docker Build') {
+            steps {
+                echo 'Building Docker image'
+            }
+        }
+
+        stage('Deploy to GKE') {
+            steps {
+                echo 'Deploying application to GKE'
+            }
         }
     }
 }
