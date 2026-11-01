@@ -17,41 +17,51 @@ pipeline {
         }
 
         stage('Build and Test') {
-            steps {
-                sh '''
-                    set -e
+    steps {
+        sh '''
+            set -e
 
-                    CONTAINER="finsecure-maven-$BUILD_NUMBER"
+            CONTAINER="finsecure-maven-$BUILD_NUMBER"
 
-                    docker rm -f "$CONTAINER" 2>/dev/null || true
+            echo "Creating Maven container..."
 
-                    docker create \
-                      --name "$CONTAINER" \
-                      --workdir /workspace/pay \
-                      maven:3.9.9-eclipse-temurin-17 \
-                      mvn clean verify
+            docker create \
+              --name "$CONTAINER" \
+              --workdir /workspace/pay \
+              maven:3.9.9-eclipse-temurin-17 \
+              mvn clean verify
 
-                    docker cp "$WORKSPACE/." "$CONTAINER:/workspace"
+            echo "Copying Jenkins workspace into Maven container..."
 
-                    docker start -a "$CONTAINER"
+            docker cp "$WORKSPACE/." "$CONTAINER:/workspace"
 
-                    docker cp \
-                      "$CONTAINER:/workspace/pay/target" \
-                      "$WORKSPACE/pay/"
+            echo "Running Maven build and tests..."
 
-                    docker rm "$CONTAINER"
-                '''
-            }
+            docker start -a "$CONTAINER"
 
-            post {
-                always {
-                    junit(
-                        testResults: 'pay/target/surefire-reports/*.xml',
-                        allowEmptyResults: true
-                    )
-                }
-            }
+            echo "Copying Maven build results back..."
+
+            mkdir -p "$WORKSPACE/pay"
+
+            docker cp \
+              "$CONTAINER:/workspace/pay/target" \
+              "$WORKSPACE/pay/"
+
+            docker rm "$CONTAINER"
+
+            echo "Maven build and tests completed."
+        '''
+    }
+
+    post {
+        always {
+            junit(
+                testResults: 'pay/target/surefire-reports/*.xml',
+                allowEmptyResults: true
+            )
         }
+    }
+}
 
         stage('Build Docker Image') {
             steps {
