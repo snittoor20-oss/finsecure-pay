@@ -14,33 +14,108 @@ pipeline {
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
+        stage('Build and Unit Tests') {
+            steps {
+                sh '''
+                    set -e
+                    CONTAINER="maven-build-${BUILD_NUMBER}"
+
+                    docker create \
+                      --name "$CONTAINER" \
+                      --workdir /workspace/pay \
+                      maven:3.9.9-eclipse-temurin-17 \
+                      mvn -B clean verify
+
+                    docker cp "$WORKSPACE/." "$CONTAINER:/workspace"
+
+                    set +e
+                    docker start -a "$CONTAINER"
+                    STATUS=$?
+                    set -e
+
+                    docker cp "$CONTAINER:/workspace/pay/target" \
+                      "$WORKSPACE/pay/" || true
+
+                    docker rm "$CONTAINER" || true
+                    exit "$STATUS"
+                '''
+            }
+        }
+
+        stage('Publish Unit Test Results') {
+            steps {
+                junit testResults: 'pay/target/surefire-reports/*.xml',
+                      allowEmptyResults: true
+            }
+        }
+
+        stage('SonarQube Cloud Analysis') {
+            steps {
+                withCredentials([
+                    string(
+                        credentialsId: 'sonar-token',
+                        variable: 'SONAR_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        set -e
+                        CONTAINER="sonar-build-${BUILD_NUMBER}"
+
+                        docker create \
+                          --name "$CONTAINER" \
+                          --workdir /workspace/pay \
+                          -e SONAR_TOKEN \
+                          maven:3.9.9-eclipse-temurin-17 \
+                          mvn -B \
+                          org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+                          -Dsonar.host.url=https://sonarcloud.io \
+                          -Dsonar.organization=snittoor20-oss \
+                          -Dsonar.projectKey=snittoor20-oss_finsecure-pay
+
+                        docker cp "$WORKSPACE/." "$CONTAINER:/workspace"
+
+                        set +e
+                        docker start -a "$CONTAINER"
+                        STATUS=$?
+                        set -e
+
+                        docker rm "$CONTAINER" || true
+                        exit "$STATUS"
+                    '''
+                }
+            }
+        }
+
         stage('Secret Scan - Source Code') {
-    steps {
-        sh '''
-            mkdir -p reports
+            steps {
+                sh '''
+                    mkdir -p reports
 
-            trivy fs \
-              --scanners secret \
-              --severity HIGH,CRITICAL \
-              --format json \
-              --exit-code 0 \
-              --output reports/source-secret-report.json \
-              pay/src
+                    trivy fs \
+                      --scanners secret \
+                      --severity HIGH,CRITICAL \
+                      --skip-dirs .git \
+                      --format json \
+                      --exit-code 0 \
+                      --output reports/source-secret-report.json \
+                      .
 
-            trivy fs \
-              --scanners secret \
-              --severity HIGH,CRITICAL \
-              --exit-code 1 \
-              pay/src
-        '''
-    }
-}
+                    trivy fs \
+                      --scanners secret \
+                      --severity HIGH,CRITICAL \
+                      --skip-dirs .git \
+                      --exit-code 1 \
+                      .
+                '''
+            }
+        }
 
         stage('Build Docker Image') {
             steps {
@@ -52,24 +127,6 @@ pipeline {
                 '''
             }
         }
-
-stage('Docker Login') {
-    steps {
-        withCredentials([
-            usernamePassword(
-                credentialsId: 'dockerhub-credentials',
-                usernameVariable: 'DOCKER_USER',
-                passwordVariable: 'DOCKER_PASSWORD'
-            )
-        ]) {
-            sh '''
-                echo "$DOCKER_PASSWORD" | docker login \
-                    -u "$DOCKER_USER" \
-                    --password-stdin
-            '''
-        }
-    }
-}
 
         stage('Vulnerability Scan - Trivy') {
             steps {
@@ -92,6 +149,30 @@ stage('Docker Login') {
                 '''
             }
         }
+
+        stage('Push Image to Docker Hub') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-credentials',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASSWORD'
+                    )
+                ]) {
+                    sh '''
+                        set +x
+
+                        echo "$DOCKER_PASSWORD" | docker login \
+                          -u "$DOCKER_USER" \
+                          --password-stdin
+
+                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
+
+                        docker logout || true
+                    '''
+                }
+            }
+        }
     }
 
     post {
@@ -100,7 +181,7 @@ stage('Docker Login') {
                              allowEmptyArchive: true,
                              fingerprint: true
 
-            echo 'Trivy security scan evidence archived.'
+            echo 'Security scan evidence archived.'
         }
 
         success {
@@ -108,7 +189,7 @@ stage('Docker Login') {
         }
 
         failure {
-            echo 'Pipeline failed. Review the Jenkins console output and Trivy reports.'
+            echo 'Pipeline failed. Review Jenkins console output and reports.'
         }
     }
 }

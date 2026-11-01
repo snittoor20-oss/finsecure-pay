@@ -1,2 +1,15 @@
 target/
-target/
+
+# Local security testing and backup files
+finsecure-test-root/
+finsecure-test.tar
+test-private-key.txt
+pay/*.backup
+pay/*.bak
+
+# Local Trivy test configuration
+trivy-secret.yaml
+
+# Kubernetes secret manifests
+k8s/secret.yaml
+pay/k8s/secret.yaml
