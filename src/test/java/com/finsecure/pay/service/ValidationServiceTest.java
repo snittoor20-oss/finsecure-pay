@@ -4,7 +4,9 @@ import com.finsecure.pay.model.TransactionRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("ValidationService Unit Tests")
@@ -272,5 +274,26 @@ class ValidationServiceTest {
 
         assertTrue(result.valid(),
             "Lowercase currency 'usd' should be treated as valid USD");
+    }
+
+    @Test
+    @DisplayName("INTENTIONAL FAILURE - remove before final submission")
+    void testIntentionalFailure() {
+        // Deliberately broken test to demonstrate
+        // that a failing test blocks the pipeline
+        assertEquals(1, 2,
+            "Intentional failure to demonstrate pipeline gate");
+    }
+
+        Step 4.8 – Demonstrate a Failing Test Blocking Deployment
+        Add a deliberately broken test to your test file:
+        java
+        @Test
+        @DisplayName("INTENTIONAL FAILURE - remove before final submission")
+        void testIntentionalFailure() {
+            // This test is deliberately broken to demonstrate
+            // that a failing test blocks the pipeline
+            assertEquals(1, 2,
+                "Intentional failure to demonstrate pipeline gate");
     }
 }
