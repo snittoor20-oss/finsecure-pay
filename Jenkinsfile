@@ -21,26 +21,26 @@ pipeline {
         }
 
         stage('Secret Scan - Source Code') {
-            steps {
-                sh '''
-                    mkdir -p reports
+    steps {
+        sh '''
+            mkdir -p reports
 
-                    trivy fs \
-                      --scanners secret \
-                      --severity HIGH,CRITICAL \
-                      --format json \
-                      --exit-code 0 \
-                      --output reports/source-secret-report.json \
-                      .
+            trivy fs \
+              --scanners secret \
+              --severity HIGH,CRITICAL \
+              --format json \
+              --exit-code 0 \
+              --output reports/source-secret-report.json \
+              pay/src
 
-                    trivy fs \
-                      --scanners secret \
-                      --severity HIGH,CRITICAL \
-                      --exit-code 1 \
-                      .
-                '''
-            }
-        }
+            trivy fs \
+              --scanners secret \
+              --severity HIGH,CRITICAL \
+              --exit-code 1 \
+              pay/src
+        '''
+    }
+}
 
         stage('Build Docker Image') {
             steps {
