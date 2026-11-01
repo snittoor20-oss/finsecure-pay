@@ -48,9 +48,18 @@ pipeline {
 
         stage('Container Image Scan - Trivy') {
             steps {
-                sh 'trivy image --severity HIGH,CRITICAL --exit-code 1 dskn123/finsecure-pay:trivy-demo'
-            }
-        }
+        sh '''
+            set -e
+
+            echo "Scanning FinSecure Pay Docker image..."
+
+            trivy image \
+              --severity HIGH,CRITICAL \
+              --exit-code 1 \
+              dskn123/finsecure-pay:$BUILD_NUMBER
+        '''
+    }
+}
 
         stage('Deploy to GKE') {
             steps {
