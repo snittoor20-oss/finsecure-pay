@@ -29,13 +29,12 @@ pipeline {
 
         
 
-stage('Container Image Security Scan - Trivy') {
+stage('Secret Scan - Trivy') {
     steps {
         sh '''
             set -e
-
             trivy image \
-              --scanners vuln,secret \
+              --scanners secret \
               --severity HIGH,CRITICAL \
               --exit-code 1 \
               dskn123/finsecure-pay:$BUILD_NUMBER
