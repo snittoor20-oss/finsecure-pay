@@ -3,6 +3,7 @@ package com.finsecure.pay.service;
 import com.finsecure.pay.model.TransactionRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -273,4 +274,12 @@ class ValidationServiceTest {
         assertTrue(result.valid(),
             "Lowercase currency 'usd' should be treated as valid USD");
     }
+
+    @Test
+    @DisplayName("INTENTIONAL FAILURE - remove before final submission")
+    void testIntentionalFailure() {
+    	 assertEquals(1, 2,
+        "Intentional failure to demonstrate pipeline gate");
+}
+
 }
