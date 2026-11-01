@@ -16,29 +16,6 @@ pipeline {
             }
         }
 
-        stage('Container Image Scan - Trivy') {
-    steps {
-        sh '''
-            set -e
-
-            trivy image \
-              --severity HIGH,CRITICAL \
-              --exit-code 1 \
-              dskn123/finsecure-pay:$BUILD_NUMBER
-        '''
-    }
-}
-
-    post {
-        always {
-            junit(
-                testResults: 'pay/target/surefire-reports/*.xml',
-                allowEmptyResults: true
-            )
-        }
-    }
-}
-
         stage('Build Docker Image') {
             steps {
                 sh '''
@@ -54,7 +31,6 @@ pipeline {
             steps {
                 sh '''
                     set -e
-
                     trivy image \
                       --severity HIGH,CRITICAL \
                       --exit-code 1 \
