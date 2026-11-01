@@ -1,18 +1,17 @@
-
 pipeline {
     agent any
 
     stages {
         stage('Checkout') {
             steps {
-                echo 'Checking out FinSecure Pay source code'
+                echo 'Checking out FinSecure Pay'
             }
         }
 
         stage('Build') {
             steps {
                 dir('pay') {
-                    bat 'mvn clean compile'
+                    sh 'mvn clean compile'
                 }
             }
         }
@@ -20,7 +19,7 @@ pipeline {
         stage('Unit Tests') {
             steps {
                 dir('pay') {
-                    bat 'mvn test'
+                    sh 'mvn test'
                 }
             }
             post {
@@ -32,7 +31,13 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                echo 'Building Docker image'
+                sh 'docker build -t dskn123/finsecure-pay:trivy-demo ./pay'
+            }
+        }
+
+        stage('Container Image Scan - Trivy') {
+            steps {
+                sh 'trivy image --severity HIGH,CRITICAL --exit-code 1 dskn123/finsecure-pay:trivy-demo'
             }
         }
 
