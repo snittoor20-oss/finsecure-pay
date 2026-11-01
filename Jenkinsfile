@@ -52,6 +52,58 @@ pipeline {
         }
     }
 
+stage('Vulnerability Scan - Trivy') {
+    steps {
+        sh '''
+            mkdir -p reports
+            set +e
+
+            trivy image \
+              --scanners vuln \
+              --severity HIGH,CRITICAL \
+              --format json \
+              --output reports/image-vulnerability-report.json \
+              ${IMAGE_NAME}:${IMAGE_TAG}
+
+            SCAN_STATUS=$?
+
+            trivy image \
+              --scanners vuln \
+              --severity HIGH,CRITICAL \
+              ${IMAGE_NAME}:${IMAGE_TAG}
+
+            set -e
+            exit $SCAN_STATUS
+        '''
+    }
+}
+
+stage('Secret Scan - Source Code') {
+    steps {
+        sh '''
+            mkdir -p reports
+            set +e
+
+            trivy fs \
+              --scanners secret \
+              --severity HIGH,CRITICAL \
+              --format json \
+              --output reports/source-secret-report.json \
+              .
+
+            SCAN_STATUS=$?
+
+            trivy fs \
+              --scanners secret \
+              --severity HIGH,CRITICAL \
+              .
+
+            set -e
+            exit $SCAN_STATUS
+        '''
+    }
+}
+
     post {
         success {
             echo 'FinSecure Pay pipeline completed successfully.'
@@ -65,4 +117,13 @@ pipeline {
             echo 'Pipeline execution finished.'
         }
     }
+post {
+    always {
+        archiveArtifacts artifacts: 'reports/*.json',
+                         allowEmptyArchive: true,
+                         fingerprint: true
+
+        echo 'Security scan evidence archived.'
+    }
+}
 }
