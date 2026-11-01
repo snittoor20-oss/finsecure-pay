@@ -38,18 +38,6 @@ pipeline {
             }
         }
 
-stage('Trivy Vulnerability Gate Demo') {
-    steps {
-        sh '''
-            trivy image \
-              --scanners vuln \
-              --severity HIGH,CRITICAL \
-              --exit-code 1 \
-              python:3.4-alpine
-        '''
-    }
-}
-
         stage('Secret Scan - Trivy') {
             steps {
                 sh '''
