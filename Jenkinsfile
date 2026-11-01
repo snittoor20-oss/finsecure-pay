@@ -94,28 +94,28 @@ pipeline {
         }
 
         stage('Secret Scan - Source Code') {
-            steps {
-                sh '''
-                    mkdir -p reports
+    steps {
+        sh '''
+            mkdir -p reports
 
-                    trivy fs \
-                      --scanners secret \
-                      --severity HIGH,CRITICAL \
-                      --skip-dirs .git \
-                      --format json \
-                      --exit-code 0 \
-                      --output reports/source-secret-report.json \
-                      .
+            trivy repo \
+              --scanners secret \
+              --severity HIGH,CRITICAL \
+              --skip-dirs .git \
+              --format json \
+              --exit-code 0 \
+              --output reports/source-secret-report.json \
+              .
 
-                    trivy fs \
-                      --scanners secret \
-                      --severity HIGH,CRITICAL \
-                      --skip-dirs .git \
-                      --exit-code 1 \
-                      .
-                '''
-            }
-        }
+            trivy repo \
+              --scanners secret \
+              --severity HIGH,CRITICAL \
+              --skip-dirs .git \
+              --exit-code 1 \
+              .
+        '''
+    }
+}
 
         stage('Build Docker Image') {
             steps {
