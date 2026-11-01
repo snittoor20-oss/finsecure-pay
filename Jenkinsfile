@@ -53,6 +53,24 @@ pipeline {
             }
         }
 
+stage('Docker Login') {
+    steps {
+        withCredentials([
+            usernamePassword(
+                credentialsId: 'dockerhub-credentials',
+                usernameVariable: 'DOCKER_USER',
+                passwordVariable: 'DOCKER_PASSWORD'
+            )
+        ]) {
+            sh '''
+                echo "$DOCKER_PASSWORD" | docker login \
+                    -u "$DOCKER_USER" \
+                    --password-stdin
+            '''
+        }
+    }
+}
+
         stage('Vulnerability Scan - Trivy') {
             steps {
                 sh '''
