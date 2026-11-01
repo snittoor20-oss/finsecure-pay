@@ -285,13 +285,4 @@ class ValidationServiceTest {
             "Intentional failure to demonstrate pipeline gate");
     }
 
-        
-    @Test
-    @DisplayName("INTENTIONAL FAILURE - remove before final submission")
-    void testIntentionalFailure() {
-            // This test is deliberately broken to demonstrate
-            // that a failing test blocks the pipeline
-        assertEquals(1, 2,
-            "Intentional failure to demonstrate pipeline gate");
-    }
 }
