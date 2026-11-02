@@ -1,0 +1,15 @@
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: finsecure-pay-monitoring
+  namespace: default
+  labels:
+    app: finsecure-pay
+spec:
+  selector:
+    matchLabels:
+      app: finsecure-pay
+  endpoints:
+    - port: metrics
+      path: /actuator/prometheus
+      interval: 30s
