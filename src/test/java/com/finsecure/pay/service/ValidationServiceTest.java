@@ -276,13 +276,5 @@ class ValidationServiceTest {
             "Lowercase currency 'usd' should be treated as valid USD");
     }
 
-    @Test
-    @DisplayName("INTENTIONAL FAILURE - remove before final submission")
-    void testIntentionalFailure() {
-        // Deliberately broken test to demonstrate
-        // that a failing test blocks the pipeline
-        assertEquals(1, 2,
-            "Intentional failure to demonstrate pipeline gate");
-    }
 
 }
