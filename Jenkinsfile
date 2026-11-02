@@ -8,7 +8,7 @@ pipeline {
         skipDefaultCheckout(true)
     }
 
-   triggers {
+    triggers {
         pollSCM('H/2 * * * *')
     }
 
@@ -34,6 +34,7 @@ pipeline {
                     docker create \
                       --name "$CONTAINER" \
                       --workdir /workspace/pay \
+                      --mount type=volume,source=finsecure-maven-cache,target=/root/.m2 \
                       maven:3.9.9-eclipse-temurin-17 \
                       mvn -B clean verify
 
@@ -75,6 +76,7 @@ pipeline {
                         docker create \
                           --name "$CONTAINER" \
                           --workdir /workspace/pay \
+                          --mount type=volume,source=finsecure-maven-cache,target=/root/.m2 \
                           -e SONAR_TOKEN \
                           maven:3.9.9-eclipse-temurin-17 \
                           mvn -B \
@@ -97,58 +99,34 @@ pipeline {
             }
         }
 
-
-        stage('Dependency Vulnerability Scan - Trivy') {
+        stage('Secret Scan - Source Code') {
             steps {
                 sh '''
                     set -e
                     mkdir -p reports
 
-                    echo "Scanning Maven dependencies..."
-
                     trivy fs \
-                      --scanners vuln \
+                      --scanners secret \
                       --severity HIGH,CRITICAL \
                       --format json \
                       --exit-code 0 \
-                      --output reports/dependency-vulnerability-report.json \
-                      pay
+                      --output reports/source-secret-report.json \
+                      pay/src
 
                     trivy fs \
-                      --scanners vuln \
+                      --scanners secret \
                       --severity HIGH,CRITICAL \
                       --exit-code 1 \
-                      pay
+                      pay/src
                 '''
             }
         }
 
-
-        stage('Secret Scan - Source Code') {
-    steps {
-        sh '''
-            set -e
-            mkdir -p reports
-
-            trivy fs \
-              --scanners secret \
-              --severity HIGH,CRITICAL \
-              --format json \
-              --exit-code 0 \
-              --output reports/source-secret-report.json \
-              pay/src
-
-            trivy fs \
-              --scanners secret \
-              --severity HIGH,CRITICAL \
-              --exit-code 1 \
-              pay/src
-        '''
-    }
-}
         stage('Build Docker Image') {
             steps {
                 sh '''
+                    set -e
+
                     docker build \
                       -t ${IMAGE_NAME}:${IMAGE_TAG} \
                       -f pay/Dockerfile \
@@ -160,6 +138,7 @@ pipeline {
         stage('Vulnerability Scan - Trivy') {
             steps {
                 sh '''
+                    set -e
                     mkdir -p reports
 
                     trivy image \
@@ -189,6 +168,7 @@ pipeline {
                     )
                 ]) {
                     sh '''
+                        set -e
                         set +x
 
                         echo "$DOCKER_PASSWORD" | docker login \
@@ -202,6 +182,7 @@ pipeline {
                 }
             }
         }
+
         stage('Deploy to GKE') {
             steps {
                 withCredentials([
@@ -216,6 +197,7 @@ pipeline {
 
                         export CLOUDSDK_CONFIG="$(mktemp -d)"
                         export KUBECONFIG="$CLOUDSDK_CONFIG/kubeconfig"
+
                         trap 'rm -rf "$CLOUDSDK_CONFIG"' EXIT
 
                         gcloud auth activate-service-account \
