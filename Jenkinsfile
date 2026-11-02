@@ -175,6 +175,49 @@ pipeline {
                 }
             }
         }
+        stage('Deploy to GKE') {
+            steps {
+                withCredentials([
+                    file(
+                        credentialsId: 'gcp-service-account',
+                        variable: 'GCP_KEY'
+                    )
+                ]) {
+                    sh '''
+                        set -eu
+                        set +x
+
+                        export CLOUDSDK_CONFIG="$(mktemp -d)"
+                        export KUBECONFIG="$CLOUDSDK_CONFIG/kubeconfig"
+                        trap 'rm -rf "$CLOUDSDK_CONFIG"' EXIT
+
+                        gcloud auth activate-service-account \
+                          --key-file="$GCP_KEY" \
+                          --quiet
+
+                        gcloud container clusters get-credentials \
+                          finsecure-cluster \
+                          --zone asia-southeast1-b \
+                          --project finsecure-pay
+
+                        echo "Deploying ${IMAGE_NAME}:${IMAGE_TAG}"
+
+                        kubectl set image \
+                          deployment/finsecure-pay \
+                          finsecure-pay=${IMAGE_NAME}:${IMAGE_TAG} \
+                          --namespace default
+
+                        kubectl rollout status \
+                          deployment/finsecure-pay \
+                          --namespace default \
+                          --timeout=300s
+
+                        kubectl get deployment finsecure-pay \
+                          --namespace default
+                    '''
+                }
+            }
+        }
     }
 
     post {
