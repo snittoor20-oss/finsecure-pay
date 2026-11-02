@@ -97,6 +97,33 @@ pipeline {
             }
         }
 
+
+        stage('Dependency Vulnerability Scan - Trivy') {
+            steps {
+                sh '''
+                    set -e
+                    mkdir -p reports
+
+                    echo "Scanning Maven dependencies..."
+
+                    trivy fs \
+                      --scanners vuln \
+                      --severity HIGH,CRITICAL \
+                      --format json \
+                      --exit-code 0 \
+                      --output reports/dependency-vulnerability-report.json \
+                      pay
+
+                    trivy fs \
+                      --scanners vuln \
+                      --severity HIGH,CRITICAL \
+                      --exit-code 1 \
+                      pay
+                '''
+            }
+        }
+
+
         stage('Secret Scan - Source Code') {
     steps {
         sh '''
